@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { 
   MessageCircleHeart, 
@@ -238,6 +237,38 @@ const CrisisPanel = ({ show, onClose }) => {
   );
 };
 
+// Mobile Sidebar Component - Custom implementation without overlay blocking
+const MobileSidebar = ({ isOpen, onClose, children }) => {
+  return (
+    <>
+      {/* Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
+          onClick={onClose}
+          data-testid="mobile-sidebar-backdrop"
+        />
+      )}
+      {/* Sidebar */}
+      <div 
+        className={`fixed inset-y-0 left-0 w-72 z-50 bg-background glass border-r border-white/20 transform transition-transform duration-300 ease-in-out md:hidden ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        data-testid="mobile-sidebar"
+      >
+        <button 
+          onClick={onClose}
+          className="absolute right-3 top-3 p-2 rounded-lg hover:bg-muted transition-colors"
+          data-testid="mobile-sidebar-close"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        {children}
+      </div>
+    </>
+  );
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
@@ -284,6 +315,7 @@ const Chat = () => {
 
   const loadConversation = async (conversationId) => {
     setIsFetchingHistory(true);
+    setSidebarOpen(false);
     try {
       const response = await axios.get(`${API}/conversations/${conversationId}/messages`);
       setMessages(response.data);
@@ -296,7 +328,6 @@ const Chat = () => {
       toast.error('Failed to load conversation');
     } finally {
       setIsFetchingHistory(false);
-      setSidebarOpen(false);
     }
   };
 
@@ -372,8 +403,19 @@ const Chat = () => {
   };
 
   const handleLogout = () => {
+    setSidebarOpen(false);
     logout();
     navigate('/');
+  };
+
+  const handleGroundingClick = () => {
+    setSidebarOpen(false);
+    setShowGrounding(true);
+  };
+
+  const handleSupportClick = () => {
+    setSidebarOpen(false);
+    setShowCrisisPanel(true);
   };
 
   if (authLoading) {
@@ -384,8 +426,8 @@ const Chat = () => {
     );
   }
 
-  const Sidebar = ({ onAction }) => (
-    <div className="h-full flex flex-col">
+  const SidebarContent = () => (
+    <div className="h-full flex flex-col pt-2">
       {/* Header */}
       <div className="p-4 border-b border-border/40">
         <div className="flex items-center gap-2 mb-4">
@@ -393,10 +435,7 @@ const Chat = () => {
           <span className="font-heading font-bold text-lg">Sereni</span>
         </div>
         <Button
-          onClick={() => {
-            startNewConversation();
-            if (onAction) onAction();
-          }}
+          onClick={startNewConversation}
           className="w-full rounded-full justify-center gap-2"
           data-testid="new-chat-btn"
         >
@@ -418,10 +457,7 @@ const Chat = () => {
                 key={conv.id}
                 conversation={conv}
                 isActive={conv.id === currentConversationId}
-                onClick={() => {
-                  loadConversation(conv.id);
-                  if (onAction) onAction();
-                }}
+                onClick={() => loadConversation(conv.id)}
                 onDelete={deleteConversation}
               />
             ))
@@ -434,10 +470,7 @@ const Chat = () => {
         <Button
           variant="ghost"
           className="w-full justify-start gap-2 rounded-xl text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            if (onAction) onAction();
-            setTimeout(() => setShowGrounding(true), 100);
-          }}
+          onClick={handleGroundingClick}
           data-testid="grounding-btn"
         >
           <Wind className="w-4 h-4" />
@@ -446,10 +479,7 @@ const Chat = () => {
         <Button
           variant="ghost"
           className="w-full justify-start gap-2 rounded-xl text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            if (onAction) onAction();
-            setTimeout(() => setShowCrisisPanel(true), 100);
-          }}
+          onClick={handleSupportClick}
           data-testid="get-support-btn"
         >
           <LifeBuoy className="w-4 h-4" />
@@ -462,10 +492,7 @@ const Chat = () => {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => {
-                if (onAction) onAction();
-                handleLogout();
-              }}
+              onClick={handleLogout}
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4" />
@@ -480,18 +507,13 @@ const Chat = () => {
     <div className="min-h-screen flex bg-background" data-testid="chat-page">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-72 flex-col glass border-r border-white/20">
-        <Sidebar />
+        <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" className="w-72 p-0 glass">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Navigation Menu</SheetTitle>
-          </SheetHeader>
-          <Sidebar onAction={() => setSidebarOpen(false)} />
-        </SheetContent>
-      </Sheet>
+      {/* Mobile Sidebar - Custom implementation */}
+      <MobileSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)}>
+        <SidebarContent />
+      </MobileSidebar>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
