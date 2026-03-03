@@ -230,26 +230,31 @@ const CrisisPanel = ({ show, onClose }) => {
 
 // Mobile Sidebar Component - Custom implementation without overlay blocking
 const MobileSidebar = ({ isOpen, onClose, children }) => {
+  // Handle backdrop click to close
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
     <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
-          onClick={onClose}
-          data-testid="mobile-sidebar-backdrop"
-        />
-      )}
-      {/* Sidebar */}
+      {/* Backdrop - clicks close the sidebar */}
       <div 
-        className={`fixed inset-y-0 left-0 w-72 z-50 bg-background glass border-r border-white/20 transform transition-transform duration-300 ease-in-out md:hidden ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        onClick={handleBackdropClick}
+        data-testid="mobile-sidebar-backdrop"
+      />
+      {/* Sidebar - higher z-index so it's clickable */}
+      <div 
+        className="fixed inset-y-0 left-0 w-72 z-50 bg-background glass border-r border-white/20 md:hidden"
         data-testid="mobile-sidebar"
       >
         <button 
           onClick={onClose}
-          className="absolute right-3 top-3 p-2 rounded-lg hover:bg-muted transition-colors"
+          className="absolute right-3 top-3 p-2 rounded-lg hover:bg-muted transition-colors z-10"
           data-testid="mobile-sidebar-close"
         >
           <X className="w-4 h-4" />
